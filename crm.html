@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NagaMas CRM — Customer Retention System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        /* ═══════════════════════════════════════
+           🎨 CSS VARIABLES & BASE
+           ═══════════════════════════════════════ */
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --bg-secondary: #334155;
+            --honda-red: #dc2626;
+            --honda-red-hover: #b91c1c;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --status-green: #22c55e;
+            --status-yellow: #f59e0b;
+            --status-red: #ef4444;
+            --status-blue: #3b82f6;
+            --sidebar-width: 260px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            line-height: 1.5;
+            overflow: hidden;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        input,
+        select,
+        textarea {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 0.6rem;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--honda-red);
+        }
+
+        /* ═══════════════════════════════════════
+           📐 LAYOUT
+           ═══════════════════════════════════════ */
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-main);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .brand {
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        .brand img {
+            width: 140px;
+            margin-bottom: 0.5rem;
+        }
+
+        .brand h2 {
+            font-size: 0.7rem;
+            color: var(--honda-red);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 800;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--honda-red);
+            color: white;
+        }
+
+        .user-profile {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background: var(--status-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ═══════════════════════════════════════
+           📦 COMPONENTS
+           ═══════════════════════════════════════ */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card h3 {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .badge {
+            font-size: 0.65rem;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-red {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--status-red);
+            border: 1px solid var(--status-red);
+        }
+
+        .badge-yellow {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--status-yellow);
+            border: 1px solid var(--status-yellow);
+        }
+
+        .badge-green {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--status-green);
+            border: 1px solid var(--status-green);
+        }
+
+        .badge-blue {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--status-blue);
+            border: 1px solid var(--status-blue);
+        }
+
+        .badge-gray {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+
+        /* TABLE */
+        .table-container {
+            margin-top: 1rem;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: var(--bg-main);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:nth-child(even) {
+            background: #1a2640;
+        }
+
+        tr:hover {
+            background: #263352;
+        }
+
+        /* BUTTONS */
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-red {
+            background: var(--honda-red);
+        }
+
+        .btn-red:hover {
+            background: var(--honda-red-hover);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-secondary);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.75rem;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-card {
+            background: var(--bg-card);
+            width: 100%;
+            max-width: 650px;
+            border-radius: 16px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group.full {
+            grid-column: span 2;
+        }
+
+        .form-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        /* FILTERS */
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* FOLLOW UP GRID */
+        .followup-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .followup-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border-left: 4px solid var(--status-green);
+            color: white;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+            transform: translateX(200%);
+            transition: transform 0.3s ease;
+            z-index: 2000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        /* REPORTS */
+        .chart-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 1rem;
+            height: 200px;
+            padding: 1rem;
+            background: var(--bg-main);
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+
+        .chart-bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            height: 100%;
+            justify-content: flex-end;
+        }
+
+        .chart-bar {
+            width: 100%;
+            background: var(--honda-red);
+            border-radius: 4px 4px 0 0;
+            min-height: 5px;
+            transition: height 1s ease;
+        }
+
+        .chart-label {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state span {
+            font-size: 4rem;
+            display: block;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .followup-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ═══════════════════════════════════════
+           🔐 LOGIN OVERLAY
+           ═══════════════════════════════════════ */
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+
+        .login-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .login-card img {
+            width: 120px;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-card h2 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 0.3rem;
+        }
+
+        .login-card .login-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .login-card .form-group {
+            text-align: left;
+        }
+
+        .login-card input {
+            width: 100%;
+        }
+
+        .login-error {
+            color: var(--status-red);
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            min-height: 1.2em;
+        }
+
+        .login-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            margin-top: 0.5rem;
+        }
+
+        .login-actions .btn {
+            width: 100%;
+            justify-content: center;
+            padding: 0.75rem;
+        }
+
+        .guest-badge {
+            display: none;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.65rem;
+            color: var(--status-yellow);
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 0.3rem 0.7rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        body.guest-mode .guest-badge {
+            display: inline-flex;
+        }
+
+        body.guest-mode .nav-item:not([data-tab="dashboard"]) {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        body.guest-mode .nav-item:not([data-tab="dashboard"])::after {
+            content: '🔒';
+            margin-left: auto;
+            font-size: 0.7rem;
+        }
+
+        .btn-logout {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 0.75rem;
+        }
+
+        .btn-logout:hover {
+            border-color: var(--status-red);
+            color: var(--status-red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LOGIN OVERLAY -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <img src="https://i.imgur.com/8fSvYUp.png" alt="Naga Mas Logo">
+            <h2>CRM System</h2>
+            <p class="login-subtitle">Customer Retention Management — Naga Mas Motor</p>
+            <div id="loginForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="login-user" placeholder="Masukkan username" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-pass" placeholder="Masukkan password" autocomplete="off">
+                </div>
+                <div class="login-error" id="loginError"></div>
+                <div class="login-actions">
+                    <button class="btn btn-red" onclick="doLogin()">🔑 Login</button>
+                    <button class="btn btn-outline" onclick="enterGuestMode()">👁️ Lihat Dashboard Saja</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="https://i.imgur.com/8fSvYUp.png" alt="Naga Mas Logo">
+                <h2>CRM System</h2>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-tab="dashboard"><span>📊</span> Dashboard</a>
+                <a href="#" class="nav-item" data-tab="konsumen"><span>👥</span> Data Konsumen</a>
+                <a href="#" class="nav-item" data-tab="kpb"><span>🔧</span> Follow Up KPB</a>
+                <a href="#" class="nav-item" data-tab="stnk"><span>📄</span> Follow Up STNK</a>
+                <a href="#" class="nav-item" data-tab="laporan"><span>📈</span> Laporan</a>
+            </nav>
+
+            <div class="user-profile">
+                <div class="avatar">CT</div>
+                <div>
+                    <p style="font-weight: 700; font-size: 0.8rem;" id="sidebar-username">Guest</p>
+                    <p style="font-size: 0.7rem; color: var(--text-secondary);" id="sidebar-role">Viewer</p>
+                </div>
+            </div>
+            <span class="guest-badge" id="guestBadge">👁️ Mode Tamu — View Only</span>
+            <button class="btn-logout" id="btnLogout" onclick="doLogout()" style="display:none;">🚪 Logout</button>
+        </aside>
+
+        <main class="main-content">
+
+            <section id="dashboard" class="tab-content active">
+                <h1 style="margin-bottom: 1.5rem; font-weight: 800;">Dashboard Ringkasan</h1>
+
+                <div class="stats-grid">
+                    <div class="card stat-card">
+                        <h3>Total Konsumen</h3>
+                        <div class="stat-value"><span id="stat-total-konsumen">0</span> <span>👥</span></div>
+                    </div>
+                    <div class="card stat-card">
+                        <h3>KPB Jatuh Tempo</h3>
+                        <div class="stat-value">
+                            <span id="stat-kpb-urgent">0</span>
+                            <span class="badge badge-red">URGENT</span>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <h3>STNK Siap Ambil</h3>
+                        <div class="stat-value">
+                            <span id="stat-stnk-siap">0</span>
+                            <span class="badge badge-yellow">READY</span>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <h3>Sudah Follow Up</h3>
+                        <div class="stat-value"><span id="stat-done-fu">0</span> <span>✅</span></div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                    <div class="card">
+                        <h2 class="title" style="margin-bottom: 1rem;">Aktivitas Follow Up Terbaru</h2>
+                        <div class="table-container">
+                            <table id="table-aktivitas">
+                                <thead>
+                                    <tr>
+                                        <th>Nama</th>
+                                        <th>KPB Ke</th>
+                                        <th>Tanggal</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h2 class="title" style="margin-bottom: 1rem;">KPB Terdekat</h2>
+                        <div id="kpb-terdekat-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="konsumen" class="tab-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h1 style="font-weight: 800;">Database Konsumen</h1>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">📥
+                            Import Data</button>
+                        <input type="file" id="importFile" accept=".csv,.xls,.xlsx" style="display: none;"
+                            onchange="importData(this)">
+                        <button class="btn btn-red" onclick="openModal()">+ Tambah Konsumen</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="filter-bar">
+                        <select id="filter-status" style="width: 150px;">
+                            <option value="all">Semua Data</option>
+                            <option value="kpb_minggu">KPB Minggu Ini</option>
+                            <option value="kpb_bulan">KPB Bulan Ini</option>
+                            <option value="stnk_siap">STNK Siap</option>
+                        </select>
+                        <input type="text" id="search-name" placeholder="Cari Nama Konsumen..." style="flex-grow: 1;">
+                        <select id="filter-cabang">
+                            <option value="all">Semua Cabang</option>
+                            <option value="Tegal Kota">Tegal Kota</option>
+                            <option value="Brebes">Brebes</option>
+                            <option value="Slawi">Slawi</option>
+                        </select>
+                        <button class="btn btn-outline btn-sm" onclick="resetFilters()">Reset</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="table-konsumen">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Nama</th>
+                                    <th>Motor</th>
+                                    <th>Tgl Faktur</th>
+                                    <th>KPB 1</th>
+                                    <th>KPB 2</th>
+                                    <th>KPB 3</th>
+                                    <th>KPB 4</th>
+                                    <th>STNK</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list-konsumen">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="kpb" class="tab-content">
+                <h1 style="margin-bottom: 0.5rem; font-weight: 800;">Follow Up KPB</h1>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem;">Ingatkan konsumen untuk servis gratis
+                    sebelum masa berlaku habis.</p>
+
+                <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                    <button class="btn btn-sm btn-red" onclick="filterKPB('urgent')">🔴 Jatuh Tempo (≤7 hari)</button>
+                    <button class="btn btn-sm btn-outline"
+                        style="border-color: var(--status-yellow); color: var(--status-yellow);"
+                        onclick="filterKPB('warning')">🟡 Segera (8-30 hari)</button>
+                    <button class="btn btn-sm btn-outline"
+                        style="border-color: var(--status-green); color: var(--status-green);"
+                        onclick="filterKPB('safe')">🟢 Aman (>30 hari)</button>
+                </div>
+
+                <div class="followup-grid" id="grid-followup-kpb">
+                </div>
+            </section>
+
+            <section id="stnk" class="tab-content">
+                <h1 style="margin-bottom: 1.5rem; font-weight: 800;">Follow Up Pengambilan STNK</h1>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nama Konsumen</th>
+                                    <th>Motor</th>
+                                    <th>Rangka</th>
+                                    <th>Tgl Beli</th>
+                                    <th>Status Dokumen</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-stnk-siap">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="laporan" class="tab-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h1 style="font-weight: 800;">Laporan Performa</h1>
+                    <button class="btn btn-outline" onclick="exportPDF()">� Export PDF</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 1.5rem;">
+                    <div class="card">
+                        <h3 class="title">Follow Up Selesai (6 Bulan Terakhir)</h3>
+                        <div class="chart-container" id="chart-laporan">
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="title">Ringkasan Per Cabang</h3>
+                        <div class="table-container">
+                            <table id="table-cabang-summary">
+                                <thead>
+                                    <tr>
+                                        <th>Cabang</th>
+                                        <th>Total User</th>
+                                        <th>Sudah FU</th>
+                                        <th>Rasio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="modal-konsumen">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 id="modal-title">Tambah Konsumen Baru</h2>
+                <button style="font-size: 1.5rem; background: none; color: var(--text-secondary);"
+                    onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-konsumen">
+                    <input type="hidden" id="edit-id">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Nama Lengkap *</label>
+                            <input type="text" id="f-nama" required placeholder="Budi Santoso">
+                        </div>
+                        <div class="form-group">
+                            <label>No. WhatsApp *</label>
+                            <input type="text" id="f-wa" required placeholder="08xxxxxxxxxx">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipe Motor *</label>
+                            <select id="f-motor" required>
+                                <option value="">Pilih Motor</option>
+                                <option value="Honda Beat">Honda Beat</option>
+                                <option value="Honda Vario 125">Honda Vario 125</option>
+                                <option value="Honda Vario 160">Honda Vario 160</option>
+                                <option value="Honda Scoopy">Honda Scoopy</option>
+                                <option value="Honda PCX 160">Honda PCX 160</option>
+                                <option value="Honda ADV 160">Honda ADV 160</option>
+                                <option value="Honda Supra X">Honda Supra X</option>
+                                <option value="Honda Revo X">Honda Revo X</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tanggal Faktur *</label>
+                            <input type="date" id="f-tanggal" required>
+                        </div>
+                        <div class="form-group">
+                            <label>No. Rangka (5 Digit)</label>
+                            <input type="text" id="f-rangka" maxlength="5">
+                        </div>
+                        <div class="form-group">
+                            <label>No. Mesin (5 Digit)</label>
+                            <input type="text" id="f-mesin" maxlength="5">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipe KPB *</label>
+                            <select id="f-tipe-kpb" required>
+                                <option value="4">4x KPB (Matic Kecil/Bebek)</option>
+                                <option value="3">3x KPB (Premium/Sport)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Status STNK</label>
+                            <select id="f-stnk">
+                                <option value="belum">Belum Proses</option>
+                                <option value="proses">Proses</option>
+                                <option value="siap">Siap Diambil</option>
+                                <option value="diambil">Sudah Diambil</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Cabang *</label>
+                            <select id="f-cabang" required>
+                                <option value="Tegal Kota">Tegal Kota</option>
+                                <option value="Brebes">Brebes</option>
+                                <option value="Slawi">Slawi</option>
+                                <option value="Ketanggungan">Ketanggungan</option>
+                                <option value="Bumiayu">Bumiayu</option>
+                            </select>
+                        </div>
+                        <div class="form-group full">
+                            <label>Catatan Tambahan</label>
+                            <textarea id="f-catatan" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="button" class="btn btn-outline" style="flex: 1;"
+                            onclick="closeModal()">Batal</button>
+                        <button type="submit" class="btn btn-red" style="flex: 2;">Simpan Data</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">✅ Data berhasil disimpan!</div>
+
+    <script>
+        /* ═══════════════════════════════════════
+           💾 DATA MANAGEMENT
+           ═══════════════════════════════════════ */
+        let KONSUMEN = [];
+
+        const SAMPLE_DATA = [
+            { id: "1", nama: "Budi Santoso", noWa: "6281234567890", tipeMotor: "Honda Beat", noRangka: "12345", noMesin: "67890", tglFaktur: "2024-05-10", tipeKPB: 4, statusStnk: "siap", cabang: "Tegal Kota", catatan: "", followUpLog: [], createdAt: new Date().toISOString() },
+            { id: "2", nama: "Sri Wahyuni", noWa: "6285678901234", tipeMotor: "Honda Vario 160", noRangka: "22334", noMesin: "55667", tglFaktur: "2024-02-15", tipeKPB: 3, statusStnk: "proses", cabang: "Brebes", catatan: "", followUpLog: [], createdAt: new Date().toISOString() },
+            { id: "3", nama: "Ahmad Fauzi", noWa: "6281912345678", tipeMotor: "Honda Scoopy", noRangka: "99887", noMesin: "11223", tglFaktur: "2024-06-20", tipeKPB: 4, statusStnk: "belum", cabang: "Slawi", catatan: "", followUpLog: [], createdAt: new Date().toISOString() },
+            { id: "4", nama: "Hendra Wijaya", noWa: "6287712345678", tipeMotor: "Honda PCX 160", noRangka: "44556", noMesin: "77889", tglFaktur: "2023-08-10", tipeKPB: 3, statusStnk: "diambil", cabang: "Tegal Kota", catatan: "", followUpLog: [{ tanggal: "2023-09-10", kpbKe: 1 }], createdAt: new Date().toISOString() },
+            { id: "5", nama: "Siti Aminah", noWa: "6281122334455", tipeMotor: "Honda ADV 160", noRangka: "00112", noMesin: "33445", tglFaktur: "2024-06-01", tipeKPB: 3, statusStnk: "siap", cabang: "Ketanggungan", catatan: "", followUpLog: [], createdAt: new Date().toISOString() },
+            { id: "6", nama: "M. Rizky", noWa: "6289988776655", tipeMotor: "Honda Vario 125", noRangka: "66778", noMesin: "88990", tglFaktur: "2024-01-10", tipeKPB: 4, statusStnk: "diambil", cabang: "Brebes", catatan: "", followUpLog: [{ tanggal: "2024-02-10", kpbKe: 1 }], createdAt: new Date().toISOString() },
+            { id: "7", nama: "Dewi Lestari", noWa: "6282233445566", tipeMotor: "Honda Revo X", noRangka: "12121", noMesin: "34343", tglFaktur: "2024-06-18", tipeKPB: 4, statusStnk: "belum", cabang: "Bumiayu", catatan: "", followUpLog: [], createdAt: new Date().toISOString() },
+            { id: "8", nama: "Agus Salim", noWa: "6281313131313", tipeMotor: "Honda Supra X", noRangka: "56565", noMesin: "78787", tglFaktur: "2024-04-01", tipeKPB: 4, statusStnk: "siap", cabang: "Slawi", catatan: "", followUpLog: [], createdAt: new Date().toISOString() }
+        ];
+
+        function initData() {
+            const localData = localStorage.getItem('nagamas_crm_data');
+            if (localData) {
+                KONSUMEN = JSON.parse(localData);
+            } else {
+                KONSUMEN = SAMPLE_DATA;
+                saveData();
+            }
+            renderAll();
+        }
+
+        function saveData() {
+            localStorage.setItem('nagamas_crm_data', JSON.stringify(KONSUMEN));
+        }
+
+        /* ═══════════════════════════════════════
+           🧮 LOGIC CALCULATIONS
+           ═══════════════════════════════════════ */
+        function getKPBDeadline(tglFaktur, kpbKe) {
+            const bulanMap = [0, 1, 4, 8, 12];
+            const date = new Date(tglFaktur);
+            date.setMonth(date.getMonth() + bulanMap[kpbKe]);
+            return date;
+        }
+
+        function getDiffDays(targetDate) {
+            const diffTime = targetDate - new Date();
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        function getStatusKPB(tglFaktur, kpbKe, followUpLog) {
+            const isDone = followUpLog.some(log => log.kpbKe === kpbKe);
+            if (isDone) return { label: 'Selesai', class: 'badge-gray' };
+
+            const deadline = getKPBDeadline(tglFaktur, kpbKe);
+            const diff = getDiffDays(deadline);
+
+            if (diff < 0) return { label: `${Math.abs(diff)} Hari Lalu`, class: 'badge-red' };
+            if (diff <= 7) return { label: `${diff} Hari Lagi`, class: 'badge-red' };
+            if (diff <= 30) return { label: `${diff} Hari Lagi`, class: 'badge-yellow' };
+            return { label: `${diff} Hari Lagi`, class: 'badge-green' };
+        }
+
+        /* ═══════════════════════════════════════
+           🖥️ UI RENDERING
+           ═══════════════════════════════════════ */
+        function renderAll() {
+            renderDashboard();
+            renderKonsumenTable();
+            renderFollowUpKPB();
+            renderSTNKTable();
+            renderLaporan();
+        }
+
+        // DASHBOARD
+        function renderDashboard() {
+            const today = new Date();
+            document.getElementById('stat-total-konsumen').innerText = KONSUMEN.length;
+
+            let urgent = 0;
+            let readyStnk = 0;
+            let totalFU = 0;
+
+            KONSUMEN.forEach(c => {
+                for (let i = 1; i <= c.tipeKPB; i++) {
+                    const isDone = c.followUpLog.some(l => l.kpbKe === i);
+                    if (!isDone) {
+                        const diff = getDiffDays(getKPBDeadline(c.tglFaktur, i));
+                        if (diff <= 7) urgent++;
+                        break;
+                    }
+                }
+                if (c.statusStnk === 'siap') readyStnk++;
+                totalFU += c.followUpLog.length;
+            });
+
+            document.getElementById('stat-kpb-urgent').innerText = urgent;
+            document.getElementById('stat-stnk-siap').innerText = readyStnk;
+            document.getElementById('stat-done-fu').innerText = totalFU;
+
+            // Recent activity
+            const logs = [];
+            KONSUMEN.forEach(c => {
+                c.followUpLog.forEach(log => {
+                    logs.push({ nama: c.nama, kpbKe: log.kpbKe, tanggal: log.tanggal });
+                });
+            });
+            logs.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+            const tbody = document.querySelector('#table-aktivitas tbody');
+            tbody.innerHTML = logs.slice(0, 5).map(l => `
+                <tr>
+                    <td>${l.nama}</td>
+                    <td>KPB ${l.kpbKe}</td>
+                    <td>${new Date(l.tanggal).toLocaleDateString('id-ID')}</td>
+                    <td><span class="badge badge-green">Selesai</span></td>
+                </tr>
+            `).join('') || '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-secondary);">Belum ada aktivitas.</td></tr>';
+
+            // KPB Terdekat List
+            const upcoming = [];
+            KONSUMEN.forEach(c => {
+                for (let i = 1; i <= c.tipeKPB; i++) {
+                    const isDone = c.followUpLog.some(l => l.kpbKe === i);
+                    if (!isDone) {
+                        const dl = getKPBDeadline(c.tglFaktur, i);
+                        upcoming.push({ nama: c.nama, motor: c.tipeMotor, kpbKe: i, deadline: dl, diff: getDiffDays(dl) });
+                        break;
+                    }
+                }
+            });
+            upcoming.sort((a, b) => a.diff - b.diff);
+
+            const kpbList = document.getElementById('kpb-terdekat-list');
+            kpbList.innerHTML = upcoming.slice(0, 4).map(u => {
+                const color = u.diff <= 7 ? 'var(--status-red)' : u.diff <= 30 ? 'var(--status-yellow)' : 'var(--status-green)';
+                return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem; background:var(--bg-main); border-radius:8px;">
+                    <div>
+                        <p style="font-weight:600; font-size:0.85rem;">${u.nama}</p>
+                        <p style="font-size:0.72rem; color:var(--text-secondary);">${u.motor} — KPB ${u.kpbKe}</p>
+                    </div>
+                    <span style="font-size:0.75rem; font-weight:700; color:${color};">${u.diff} hari</span>
+                </div>`;
+            }).join('') || '<p style="text-align:center; padding:2rem; color:var(--text-secondary);">Semua KPB sudah selesai! 🎉</p>';
+        }
+
+        // KONSUMEN TABLE
+        function renderKonsumenTable() {
+            const list = document.getElementById('list-konsumen');
+            const search = document.getElementById('search-name').value.toLowerCase();
+            const statusFilter = document.getElementById('filter-status').value;
+            const cabangFilter = document.getElementById('filter-cabang').value;
+
+            const filtered = KONSUMEN.filter(c => {
+                const matchName = c.nama.toLowerCase().includes(search);
+                const matchCabang = cabangFilter === 'all' || c.cabang === cabangFilter;
+
+                let matchStatus = true;
+                if (statusFilter === 'stnk_siap') matchStatus = c.statusStnk === 'siap';
+                if (statusFilter === 'kpb_minggu') {
+                    matchStatus = false;
+                    for (let i = 1; i <= c.tipeKPB; i++) {
+                        if (!c.followUpLog.some(l => l.kpbKe === i)) {
+                            if (getDiffDays(getKPBDeadline(c.tglFaktur, i)) <= 7) matchStatus = true;
+                            break;
+                        }
+                    }
+                }
+                return matchName && matchCabang && matchStatus;
+            });
+
+            list.innerHTML = filtered.map((c, index) => {
+                const kpbs = [];
+                for (let i = 1; i <= 4; i++) {
+                    if (i > c.tipeKPB) {
+                        kpbs.push(`<td>-</td>`);
+                    } else {
+                        const status = getStatusKPB(c.tglFaktur, i, c.followUpLog);
+                        kpbs.push(`<td><span class="badge ${status.class}">${status.label}</span></td>`);
+                    }
+                }
+                const stnkMap = { belum: 'Belum', proses: 'Proses', siap: '✅ Siap', diambil: '📦 Diambil' };
+                return `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${c.nama}</strong><br><span style="font-size:0.7rem; color:var(--text-secondary);">${c.cabang}</span></td>
+                    <td>${c.tipeMotor}</td>
+                    <td>${new Date(c.tglFaktur).toLocaleDateString('id-ID')}</td>
+                    ${kpbs.join('')}
+                    <td>${stnkMap[c.statusStnk] || c.statusStnk}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="editKonsumen('${c.id}')">✏️</button>
+                        <button class="btn btn-sm btn-outline" style="color:var(--status-red); border-color:var(--status-red);" onclick="deleteKonsumen('${c.id}')">🗑️</button>
+                    </td>
+                </tr>`;
+            }).join('') || '<tr><td colspan="10" style="text-align:center; padding:3rem; color:var(--text-secondary);">Tidak ada data ditemukan.</td></tr>';
+        }
+
+        // Event listeners for filters
+        document.getElementById('search-name').addEventListener('input', renderKonsumenTable);
+        document.getElementById('filter-status').addEventListener('change', renderKonsumenTable);
+        document.getElementById('filter-cabang').addEventListener('change', renderKonsumenTable);
+
+        function resetFilters() {
+            document.getElementById('search-name').value = '';
+            document.getElementById('filter-status').value = 'all';
+            document.getElementById('filter-cabang').value = 'all';
+            renderKonsumenTable();
+        }
+
+        // FOLLOW UP KPB GRID
+        let kpbFilterMode = 'urgent';
+        function filterKPB(mode) {
+            kpbFilterMode = mode;
+            renderFollowUpKPB();
+        }
+
+        function renderFollowUpKPB() {
+            const data = [];
+
+            KONSUMEN.forEach(c => {
+                for (let i = 1; i <= c.tipeKPB; i++) {
+                    const isDone = c.followUpLog.some(l => l.kpbKe === i);
+                    if (!isDone) {
+                        const dl = getKPBDeadline(c.tglFaktur, i);
+                        const diff = getDiffDays(dl);
+                        let mode = 'safe';
+                        if (diff <= 7) mode = 'urgent';
+                        else if (diff <= 30) mode = 'warning';
+
+                        if (mode === kpbFilterMode) {
+                            data.push({ ...c, kpbTarget: i, dl: dl, diff: diff });
+                        }
+                        break;
+                    }
+                }
+            });
+
+            const grid = document.getElementById('grid-followup-kpb');
+            if (data.length === 0) {
+                grid.innerHTML = `<div class="empty-state" style="grid-column: span 2;"><span>🎉</span><p>Tidak ada KPB yang masuk kategori ini.</p></div>`;
+                return;
+            }
+
+            grid.innerHTML = data.map(d => {
+                const urgColor = d.diff <= 7 ? 'var(--status-red)' : d.diff <= 30 ? 'var(--status-yellow)' : 'var(--status-green)';
+                return `
+                <div class="card followup-card" style="border-left: 3px solid ${urgColor};">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h3 style="font-size:1rem; font-weight:700;">${d.nama}</h3>
+                            <p style="font-size:0.75rem; color:var(--text-secondary);">${d.tipeMotor} — ${d.cabang}</p>
+                        </div>
+                        <span class="badge ${d.diff <= 7 ? 'badge-red' : d.diff <= 30 ? 'badge-yellow' : 'badge-green'}">KPB ${d.kpbTarget}</span>
+                    </div>
+                    <div style="background:var(--bg-main); padding:1rem; border-radius:8px; display:flex; justify-content:space-between;">
+                        <div>
+                            <p style="font-size:0.7rem; color:var(--text-secondary);">DEADLINE</p>
+                            <p style="font-weight:600;">${d.dl.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                        </div>
+                        <div style="text-align:right">
+                            <p style="font-size:0.7rem; color:var(--text-secondary);">SISA WAKTU</p>
+                            <p style="font-weight:700; color:${urgColor};">${d.diff < 0 ? 'LEWAT ' + Math.abs(d.diff) + ' hari' : d.diff + ' hari lagi'}</p>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-sm btn-red" style="flex:1;" onclick="sendWA_KPB('${d.id}', ${d.kpbTarget})">📲 Kirim WA</button>
+                        <button class="btn btn-sm btn-outline" style="flex:1;" onclick="markDone('${d.id}', ${d.kpbTarget})">✅ Tandai Selesai</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // STNK TABLE
+        function renderSTNKTable() {
+            const tbody = document.getElementById('table-stnk-siap');
+            const data = KONSUMEN.filter(c => c.statusStnk === 'siap');
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-secondary);">Tidak ada STNK yang siap diambil.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map(c => `
+                <tr>
+                    <td><strong>${c.nama}</strong></td>
+                    <td>${c.tipeMotor}</td>
+                    <td>${c.noRangka || '-'}</td>
+                    <td>${new Date(c.tglFaktur).toLocaleDateString('id-ID')}</td>
+                    <td><span class="badge badge-yellow">Siap Diambil</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-red" onclick="sendWA_STNK('${c.id}')">📲 WA</button>
+                        <button class="btn btn-sm btn-outline" onclick="updateSTNK('${c.id}', 'diambil')">📦 Sudah Diambil</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // LAPORAN
+        function renderLaporan() {
+            const chart = document.getElementById('chart-laporan');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'];
+
+            chart.innerHTML = months.map(m => {
+                const val = Math.floor(Math.random() * 80) + 20;
+                return `
+                <div class="chart-bar-wrapper">
+                    <div class="chart-bar" style="height: ${val}%;"></div>
+                    <span class="chart-label">${m}</span>
+                </div>`;
+            }).join('');
+
+            const summaryTbody = document.querySelector('#table-cabang-summary tbody');
+            const cabangs = ["Tegal Kota", "Brebes", "Slawi", "Ketanggungan", "Bumiayu"];
+
+            summaryTbody.innerHTML = cabangs.map(cb => {
+                const users = KONSUMEN.filter(c => c.cabang === cb);
+                const fus = users.reduce((acc, curr) => acc + curr.followUpLog.length, 0);
+                const ratio = users.length > 0 ? Math.round((fus / (users.length * 4)) * 100) : 0;
+                return `
+                <tr>
+                    <td>${cb}</td>
+                    <td>${users.length}</td>
+                    <td>${fus}</td>
+                    <td><span class="badge ${ratio > 50 ? 'badge-green' : ratio > 20 ? 'badge-yellow' : 'badge-red'}">${ratio}%</span></td>
+                </tr>`;
+            }).join('');
+        }
+
+        /* ═══════════════════════════════════════
+           ⚙️ ACTIONS & MODALS
+           ═══════════════════════════════════════ */
+        function openModal(id) {
+            document.getElementById('modal-konsumen').style.display = 'flex';
+            if (id) {
+                const c = KONSUMEN.find(k => k.id === id);
+                document.getElementById('modal-title').textContent = 'Edit Data Konsumen';
+                document.getElementById('edit-id').value = c.id;
+                document.getElementById('f-nama').value = c.nama;
+                document.getElementById('f-wa').value = c.noWa;
+                document.getElementById('f-motor').value = c.tipeMotor;
+                document.getElementById('f-tanggal').value = c.tglFaktur;
+                document.getElementById('f-rangka').value = c.noRangka;
+                document.getElementById('f-mesin').value = c.noMesin;
+                document.getElementById('f-tipe-kpb').value = c.tipeKPB;
+                document.getElementById('f-stnk').value = c.statusStnk;
+                document.getElementById('f-cabang').value = c.cabang;
+                document.getElementById('f-catatan').value = c.catatan;
+            } else {
+                document.getElementById('modal-title').textContent = 'Tambah Konsumen Baru';
+                document.getElementById('edit-id').value = '';
+                document.getElementById('form-konsumen').reset();
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal-konsumen').style.display = 'none';
+        }
+
+        function editKonsumen(id) { openModal(id); }
+
+        function deleteKonsumen(id) {
+            if (confirm('Yakin ingin menghapus data ini?')) {
+                KONSUMEN = KONSUMEN.filter(c => c.id !== id);
+                saveData();
+                renderAll();
+                showToast('🗑️ Data berhasil dihapus.');
+            }
+        }
+
+        function formatWa(num) {
+            num = num.replace(/\D/g, '');
+            if (num.startsWith('08')) num = '628' + num.substring(2);
+            if (!num.startsWith('62')) num = '62' + num;
+            return num;
+        }
+
+        // Form submit
+        document.getElementById('form-konsumen').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const editId = document.getElementById('edit-id').value;
+            const data = {
+                id: editId || Date.now().toString(),
+                nama: document.getElementById('f-nama').value,
+                noWa: formatWa(document.getElementById('f-wa').value),
+                tipeMotor: document.getElementById('f-motor').value,
+                tglFaktur: document.getElementById('f-tanggal').value,
+                noRangka: document.getElementById('f-rangka').value,
+                noMesin: document.getElementById('f-mesin').value,
+                tipeKPB: parseInt(document.getElementById('f-tipe-kpb').value),
+                statusStnk: document.getElementById('f-stnk').value,
+                cabang: document.getElementById('f-cabang').value,
+                catatan: document.getElementById('f-catatan').value,
+                followUpLog: [],
+                createdAt: new Date().toISOString()
+            };
+
+            if (editId) {
+                const idx = KONSUMEN.findIndex(c => c.id === editId);
+                data.followUpLog = KONSUMEN[idx].followUpLog;
+                data.createdAt = KONSUMEN[idx].createdAt;
+                KONSUMEN[idx] = data;
+            } else {
+                KONSUMEN.push(data);
+            }
+
+            saveData();
+            renderAll();
+            closeModal();
+            showToast(editId ? '✅ Data berhasil diperbarui!' : '✅ Data berhasil disimpan!');
+        });
+
+        function markDone(id, kpbKe) {
+            const c = KONSUMEN.find(k => k.id === id);
+            if (!c.followUpLog.some(l => l.kpbKe === kpbKe)) {
+                c.followUpLog.push({ tanggal: new Date().toISOString().split('T')[0], kpbKe: kpbKe });
+                saveData();
+                renderAll();
+                showToast(`✅ KPB ${kpbKe} untuk ${c.nama} ditandai selesai!`);
+            }
+        }
+
+        function updateSTNK(id, status) {
+            const c = KONSUMEN.find(k => k.id === id);
+            c.statusStnk = status;
+            saveData();
+            renderAll();
+            showToast(`✅ Status STNK ${c.nama} diperbarui!`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function sendWA_KPB(id, kpbKe) {
+            const c = KONSUMEN.find(k => k.id === id);
+            const dl = getKPBDeadline(c.tglFaktur, kpbKe);
+            const diff = getDiffDays(dl);
+            const tglStr = dl.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            const timeText = diff < 0 ? `SUDAH LEWAT ${Math.abs(diff)} hari` : `${diff} hari lagi`;
+            const promo = kpbKe === 1 ? 'oli + jasa servis' : 'jasa servis';
+
+            const pesan = `Halo Kak ${c.nama} 👋\n\nIni dari *Naga Mas Motor* (Dealer Resmi Honda Tegal & Brebes).\n\nKami mau ingatkan bahwa motor Honda *${c.tipeMotor}* Kakak sudah saatnya servis gratis *KPB ke-${kpbKe}* 🔧\n\n📅 Batas waktu: *${tglStr}* (${timeText})\n🎁 Gratis: *${promo}*\n\n📍 Silakan datang ke bengkel resmi terdekat dengan membawa:\n✅ Buku KPB / Buku Servis\n✅ STNK\n\n⏰ Jam operasional: Senin–Sabtu, 08.00–17.00 WIB\n\nJangan sampai terlewat ya Kak! Servis gratis ini berlaku terbatas. 😊\n\n*Naga Mas Motor — Dealer Resmi Honda Tegal & Brebes*\n📞 WA: 0877-1142-8916`;
+
+            window.open(`https://wa.me/${c.noWa}?text=${encodeURIComponent(pesan)}`, '_blank');
+
+            if (!c.followUpLog.some(l => l.kpbKe === kpbKe)) {
+                markDone(id, kpbKe);
+            }
+        }
+        function sendWA_STNK(id) {
+            const c = KONSUMEN.find(k => k.id === id);
+            const pesan = `Halo Kak ${c.nama} 👋\n\nKabar baik! *STNK / Plat Nomor* motor Honda *${c.tipeMotor}* Kakak sudah selesai diproses dan siap untuk diambil! 🎉\n\n📋 Dokumen yang sudah siap:\n✅ STNK\n✅ Nomor Polisi (Plat)\n\nSilakan datang ke kantor Naga Mas Motor dengan membawa:\n📎 Bukti pembayaran / invoice asli\n📎 KTP asli\n\n⏰ Jam operasional: Senin–Sabtu, 08.00–17.00 WIB\n\nDitunggu ya Kak! 😊\n\n*Naga Mas Motor — Dealer Resmi Honda Tegal & Brebes*\n📞 WA: 0877-1142-8916`;
+
+            window.open(`https://wa.me/${c.noWa}?text=${encodeURIComponent(pesan)}`, '_blank');
+        }
+
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape', 'mm', 'a4');
+            const pageW = doc.internal.pageSize.getWidth();
+            const pageH = doc.internal.pageSize.getHeight();
+            const margin = 14;
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            // ─── COLOR PALETTE ───
+            const RED = [220, 38, 38];
+            const DARK = [15, 23, 42];
+            const GRAY = [100, 116, 139];
+            const LIGHT_BG = [241, 245, 249];
+
+            // ═══════════════════════════════════════
+            //  PAGE 1: COVER / SUMMARY
+            // ═══════════════════════════════════════
+
+            // Header band
+            doc.setFillColor(...DARK);
+            doc.rect(0, 0, pageW, 38, 'F');
+            doc.setFillColor(...RED);
+            doc.rect(0, 38, pageW, 3, 'F');
+
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(22);
+            doc.setFont('helvetica', 'bold');
+            doc.text('NAGA MAS MOTOR', margin, 18);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Customer Retention Management — Laporan Performa', margin, 28);
+            doc.setFontSize(9);
+            doc.text('Tanggal: ' + dateStr, pageW - margin, 18, { align: 'right' });
+            doc.text('Dealer Resmi Honda Tegal & Brebes', pageW - margin, 28, { align: 'right' });
+
+            let y = 52;
+
+            // ─── DASHBOARD STATS ───
+            doc.setTextColor(...DARK);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Ringkasan Dashboard', margin, y);
+            y += 8;
+
+            // Calculate stats
+            let urgentKPB = 0, stnkSiap = 0, totalFU = 0;
+            KONSUMEN.forEach(c => {
+                for (let i = 1; i <= c.tipeKPB; i++) {
+                    const isDone = c.followUpLog.some(l => l.kpbKe === i);
+                    if (!isDone) {
+                        if (getDiffDays(getKPBDeadline(c.tglFaktur, i)) <= 7) urgentKPB++;
+                        break;
+                    }
+                }
+                if (c.statusStnk === 'siap') stnkSiap++;
+                totalFU += c.followUpLog.length;
+            });
+
+            const stats = [
+                { label: 'Total Konsumen', value: KONSUMEN.length, color: [59, 130, 246] },
+                { label: 'KPB Jatuh Tempo', value: urgentKPB, color: [239, 68, 68] },
+                { label: 'STNK Siap Ambil', value: stnkSiap, color: [245, 158, 11] },
+                { label: 'Total Follow Up', value: totalFU, color: [34, 197, 94] },
+            ];
+
+            const boxW = (pageW - 2 * margin - 3 * 6) / 4;
+            stats.forEach((s, i) => {
+                const x = margin + i * (boxW + 6);
+                doc.setFillColor(...LIGHT_BG);
+                doc.roundedRect(x, y, boxW, 24, 3, 3, 'F');
+                doc.setFillColor(...s.color);
+                doc.rect(x, y, 3, 24, 'F');
+                doc.setTextColor(...GRAY);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                doc.text(s.label.toUpperCase(), x + 8, y + 8);
+                doc.setTextColor(...s.color);
+                doc.setFontSize(18);
+                doc.setFont('helvetica', 'bold');
+                doc.text(String(s.value), x + 8, y + 20);
+            });
+
+            y += 34;
+
+            // ─── RINGKASAN PER CABANG ───
+            doc.setTextColor(...DARK);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Ringkasan Per Cabang', margin, y);
+            y += 4;
+
+            const cabangs = ['Tegal Kota', 'Brebes', 'Slawi', 'Ketanggungan', 'Bumiayu'];
+            const cabangData = cabangs.map(cb => {
+                const users = KONSUMEN.filter(c => c.cabang === cb);
+                const fus = users.reduce((a, c) => a + c.followUpLog.length, 0);
+                const maxFU = users.length * 4;
+                const ratio = maxFU > 0 ? Math.round((fus / maxFU) * 100) : 0;
+                return [cb, users.length, fus, ratio + '%'];
+            });
+            // Add totals row
+            const totalUsers = KONSUMEN.length;
+            const totalFollowUps = KONSUMEN.reduce((a, c) => a + c.followUpLog.length, 0);
+            const totalMax = totalUsers * 4;
+            const totalRatio = totalMax > 0 ? Math.round((totalFollowUps / totalMax) * 100) : 0;
+            cabangData.push(['TOTAL', totalUsers, totalFollowUps, totalRatio + '%']);
+
+            doc.autoTable({
+                startY: y,
+                head: [['Cabang', 'Total Konsumen', 'Sudah Follow Up', 'Rasio']],
+                body: cabangData,
+                margin: { left: margin, right: margin },
+                styles: { fontSize: 9, cellPadding: 4, lineColor: [203, 213, 225], lineWidth: 0.2 },
+                headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+                bodyStyles: { textColor: DARK },
+                alternateRowStyles: { fillColor: LIGHT_BG },
+                didParseCell: function (data) {
+                    // Bold the TOTAL row
+                    if (data.section === 'body' && data.row.index === cabangData.length - 1) {
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.fillColor = [226, 232, 240];
+                    }
+                }
+            });
+
+            y = doc.lastAutoTable.finalY + 12;
+
+            // ─── KPB STATUS OVERVIEW ───
+            doc.setTextColor(...DARK);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Status KPB Semua Konsumen', margin, y);
+            y += 4;
+
+            const kpbOverview = KONSUMEN.map(c => {
+                const kpbStatuses = [];
+                for (let i = 1; i <= c.tipeKPB; i++) {
+                    const status = getStatusKPB(c.tglFaktur, i, c.followUpLog);
+                    kpbStatuses.push(status.label);
+                }
+                // Fill remaining with '-'
+                while (kpbStatuses.length < 4) kpbStatuses.push('-');
+                const stnkMap = { belum: 'Belum', proses: 'Proses', siap: 'Siap Ambil', diambil: 'Diambil' };
+                return [c.nama, c.tipeMotor, c.cabang, ...kpbStatuses, stnkMap[c.statusStnk] || c.statusStnk];
+            });
+
+            doc.autoTable({
+                startY: y,
+                head: [['Nama', 'Motor', 'Cabang', 'KPB 1', 'KPB 2', 'KPB 3', 'KPB 4', 'STNK']],
+                body: kpbOverview,
+                margin: { left: margin, right: margin },
+                styles: { fontSize: 7.5, cellPadding: 3, lineColor: [203, 213, 225], lineWidth: 0.2, overflow: 'ellipsize' },
+                headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+                bodyStyles: { textColor: DARK },
+                alternateRowStyles: { fillColor: LIGHT_BG },
+                columnStyles: {
+                    0: { cellWidth: 38 },
+                    1: { cellWidth: 32 },
+                    2: { cellWidth: 28 },
+                },
+                didParseCell: function (data) {
+                    if (data.section === 'body' && data.column.index >= 3 && data.column.index <= 6) {
+                        const val = data.cell.raw;
+                        if (val === 'Selesai') {
+                            data.cell.styles.textColor = [34, 197, 94];
+                            data.cell.styles.fontStyle = 'bold';
+                        } else if (val.includes('Lalu') || (val.includes('Hari Lagi') && parseInt(val) <= 7)) {
+                            data.cell.styles.textColor = [239, 68, 68];
+                            data.cell.styles.fontStyle = 'bold';
+                        } else if (val.includes('Hari Lagi') && parseInt(val) <= 30) {
+                            data.cell.styles.textColor = [245, 158, 11];
+                        }
+                    }
+                }
+            });
+
+            // ─── PAGE 2+: FULL DATA TABLE ───
+            doc.addPage('landscape');
+
+            // Mini header on subsequent pages
+            doc.setFillColor(...DARK);
+            doc.rect(0, 0, pageW, 20, 'F');
+            doc.setFillColor(...RED);
+            doc.rect(0, 20, pageW, 2, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Data Lengkap Konsumen', margin, 14);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text(dateStr, pageW - margin, 14, { align: 'right' });
+
+            const fullData = KONSUMEN.map((c, i) => [
+                i + 1,
+                c.nama,
+                c.noWa,
+                c.tipeMotor,
+                new Date(c.tglFaktur).toLocaleDateString('id-ID'),
+                c.noRangka || '-',
+                c.noMesin || '-',
+                c.tipeKPB + 'x',
+                { belum: 'Belum', proses: 'Proses', siap: 'Siap', diambil: 'Diambil' }[c.statusStnk] || c.statusStnk,
+                c.cabang,
+                c.followUpLog.length
+            ]);
+
+            doc.autoTable({
+                startY: 28,
+                head: [['No', 'Nama', 'No WA', 'Motor', 'Tgl Faktur', 'Rangka', 'Mesin', 'KPB', 'STNK', 'Cabang', 'FU']],
+                body: fullData,
+                margin: { left: margin, right: margin },
+                styles: { fontSize: 7.5, cellPadding: 3, lineColor: [203, 213, 225], lineWidth: 0.2, overflow: 'ellipsize' },
+                headStyles: { fillColor: DARK, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+                bodyStyles: { textColor: DARK },
+                alternateRowStyles: { fillColor: LIGHT_BG },
+                columnStyles: {
+                    0: { cellWidth: 10, halign: 'center' },
+                    1: { cellWidth: 35 },
+                    2: { cellWidth: 30 },
+                    7: { cellWidth: 12, halign: 'center' },
+                    10: { cellWidth: 10, halign: 'center' },
+                }
+            });
+
+            // ─── FOOTER on every page ───
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let p = 1; p <= pageCount; p++) {
+                doc.setPage(p);
+                doc.setFillColor(...DARK);
+                doc.rect(0, pageH - 12, pageW, 12, 'F');
+                doc.setTextColor(...GRAY);
+                doc.setFontSize(7);
+                doc.text('Naga Mas Motor — CRM System | Dicetak: ' + today.toLocaleString('id-ID'), margin, pageH - 4);
+                doc.text('Halaman ' + p + ' / ' + pageCount, pageW - margin, pageH - 4, { align: 'right' });
+            }
+
+            // Save
+            doc.save('Laporan_NagaMas_CRM_' + today.toISOString().split('T')[0] + '.pdf');
+            showToast('📄 PDF berhasil didownload!');
+        }
+
+        // NAVIGATION (with auth guard)
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = item.getAttribute('data-tab');
+
+                // Auth guard: guest can only access dashboard
+                if (!isLoggedIn && target !== 'dashboard') {
+                    showToast('🔒 Login diperlukan untuk mengakses fitur ini.');
+                    return;
+                }
+
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(i => i.classList.remove('active'));
+
+                item.classList.add('active');
+                document.getElementById(target).classList.add('active');
+            });
+        });
+
+        // Also listen for Enter key on login fields
+        document.getElementById('login-pass').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') doLogin();
+        });
+        document.getElementById('login-user').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') document.getElementById('login-pass').focus();
+        });
+
+        /* ═══════════════════════════════════════
+           🔐 AUTH SYSTEM
+           ═══════════════════════════════════════ */
+        let isLoggedIn = false;
+
+        function doLogin() {
+            const user = document.getElementById('login-user').value.trim();
+            const pass = document.getElementById('login-pass').value;
+
+            if (user === 'admin crm' && pass === 'crm') {
+                isLoggedIn = true;
+                sessionStorage.setItem('nagamas_auth', 'true');
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.body.classList.remove('guest-mode');
+                document.getElementById('sidebar-username').textContent = 'Admin';
+                document.getElementById('sidebar-role').textContent = 'Counter Tegal';
+                document.getElementById('btnLogout').style.display = 'block';
+                document.getElementById('loginError').textContent = '';
+                showToast('✅ Login berhasil! Selamat datang, Admin.');
+            } else {
+                document.getElementById('loginError').textContent = '❌ Username atau password salah!';
+                document.getElementById('login-pass').value = '';
+                document.getElementById('login-pass').focus();
+            }
+        }
+
+        function enterGuestMode() {
+            isLoggedIn = false;
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.body.classList.add('guest-mode');
+            document.getElementById('sidebar-username').textContent = 'Guest';
+            document.getElementById('sidebar-role').textContent = 'Viewer';
+            document.getElementById('btnLogout').style.display = 'block';
+
+            // Force show dashboard only
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(i => i.classList.remove('active'));
+            document.querySelector('[data-tab="dashboard"]').classList.add('active');
+            document.getElementById('dashboard').classList.add('active');
+        }
+
+        function doLogout() {
+            isLoggedIn = false;
+            sessionStorage.removeItem('nagamas_auth');
+            document.body.classList.remove('guest-mode');
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+            document.getElementById('loginError').textContent = '';
+            document.getElementById('btnLogout').style.display = 'none';
+
+            // Reset to dashboard
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(i => i.classList.remove('active'));
+            document.querySelector('[data-tab="dashboard"]').classList.add('active');
+            document.getElementById('dashboard').classList.add('active');
+        }
+
+        function checkSession() {
+            const auth = sessionStorage.getItem('nagamas_auth');
+            if (auth === 'true') {
+                isLoggedIn = true;
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.getElementById('sidebar-username').textContent = 'Admin';
+                document.getElementById('sidebar-role').textContent = 'Counter Tegal';
+                document.getElementById('btnLogout').style.display = 'block';
+            }
+        }
+
+        // Init on load
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (ext === 'csv') {
+                // CSV parsing (original logic)
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const rows = e.target.result.split('\n');
+                    processImportRows(rows.slice(1).filter(r => r.trim()).map(r => r.split(',')), 'CSV');
+                    input.value = '';
+                };
+                reader.readAsText(file);
+            } else if (ext === 'xls' || ext === 'xlsx') {
+                // Excel parsing via SheetJS
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const workbook = XLSX.read(e.target.result, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                        // Skip header row (index 0), map remaining rows
+                        processImportRows(jsonData.slice(1).filter(r => r.length > 0 && r.some(c => String(c).trim() !== '')), ext.toUpperCase());
+                    } catch (err) {
+                        showToast('❌ Gagal membaca file Excel. Pastikan format benar!');
+                        console.error(err);
+                    }
+                    input.value = '';
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                showToast('❌ Format tidak didukung. Gunakan CSV, XLS, atau XLSX.');
+                input.value = '';
+            }
+        }
+
+        function processImportRows(rows, fileType) {
+            let importedCount = 0;
+            // Format kolom: Nama, No WA, Tipe Motor, Tgl Faktur (YYYY-MM-DD), No Rangka, No Mesin, Tipe KPB (3/4), Cabang
+            rows.forEach(cols => {
+                if (cols.length >= 4 && String(cols[0]).trim()) {
+                    // Handle Excel date serial numbers
+                    let tglFaktur = String(cols[3]).trim();
+                    if (!isNaN(tglFaktur) && Number(tglFaktur) > 30000) {
+                        // Excel date serial → JS date
+                        const excelDate = new Date((Number(tglFaktur) - 25569) * 86400 * 1000);
+                        tglFaktur = excelDate.toISOString().split('T')[0];
+                    }
+
+                    const newData = {
+                        id: "id-" + Date.now() + Math.random().toString(36).substr(2, 9),
+                        nama: String(cols[0]).trim(),
+                        noWa: formatWa(String(cols[1]).trim()),
+                        tipeMotor: String(cols[2]).trim(),
+                        tglFaktur: tglFaktur,
+                        noRangka: cols[4] ? String(cols[4]).trim() : "",
+                        noMesin: cols[5] ? String(cols[5]).trim() : "",
+                        tipeKPB: cols[6] ? parseInt(cols[6]) || 4 : 4,
+                        statusStnk: "proses",
+                        cabang: cols[7] ? String(cols[7]).trim() : "Tegal Kota",
+                        catatan: "Imported via " + fileType,
+                        followUpLog: [],
+                        createdAt: new Date().toISOString()
+                    };
+                    KONSUMEN.push(newData);
+                    importedCount++;
+                }
+            });
+
+            if (importedCount > 0) {
+                saveData();
+                renderAll();
+                showToast(`✅ Berhasil import ${importedCount} data!`);
+            } else {
+                showToast('❌ Tidak ada data valid ditemukan. Cek format file!');
+            }
+        }
+
+        window.onload = function () {
+            checkSession();
+            initData();
+        };
+
+    </script>
+</body>
+
+</html>
